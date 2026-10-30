@@ -51,9 +51,20 @@ running a real download (see "Smoke test").
 - Keep the SDK in `optimizeDeps.exclude`. It resolves `ant_core_bg.wasm` and
   `upload-worker.js` via `new URL(..., import.meta.url)`; dep pre-bundling breaks both
   and the page fails during `connect()`.
-- `streamAndSave()` / `downloadAndSave()` open a file picker, which consumes the click's
-  user activation. Never `await` connect/openFile before calling them — `startAll()`
-  requests `showDirectoryPicker()` first for that reason.
+- Downloads do not use `streamAndSave()` / `pipeTo()`. Those are one pass: a single
+  chunk the browser core cannot fetch aborts the transfer even with 4 GB already
+  written. `writeInWindows()` opens the file with `openFile()` and copies it in 4 MiB
+  ranges (the protocol limit), retrying a failed window on its own, so a chunk the
+  WebRTC peer set is missing costs seconds instead of the whole file.
+- A picker consumes the click's user activation, so the destination is chosen in
+  `runItems()` *before* `connect()`: `showDirectoryPicker()` for a queue,
+  `showSaveFilePicker()` for a single "Save…". Never `await` connect/openFile first.
+- The browser core reaches only peers that answer WebRTC Direct; ICE failures are
+  cached per client and a chunk can be unreachable from the browser while the native
+  client (`ant chunk get <hash> --all-peers`) fetches it from a farther peer. Symptom:
+  `OPEN_FILE_FAILED: … Missing chunk <hash> required for data reconstruction`.
+  Browser throughput is ~0.5 MB/s against ~15 MB/s for `ant file download`, so a
+  multi-GB file takes hours here.
 - Streaming reads skip a manifest entry's `sha256` check (buffered `download()` does it),
   and `entry.size` is a creator hint, not a guarantee.
 - `download()` buffers the entire file and rejects above `maxMemoryBytes` (1 GB default).

@@ -322,22 +322,89 @@ async function anchorSave(blob, name) {
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
-async function downloadOne(c, item, dirHandle, signal) {
+// The SDK's pipeTo()/streamAndSave() is a single pass: one chunk the browser's
+// WebRTC peers cannot serve aborts the whole transfer, however much is already
+// written. Reading fixed windows instead lets a window be retried on its own,
+// so a bad chunk costs seconds rather than the entire file.
+const WINDOW_BYTES = 4 * 1024 * 1024; // protocol range limit
+const WINDOW_ATTEMPTS = 5;
+
+function sleep(ms, signal) {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(signal.reason);
+      return;
+    }
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(signal.reason);
+    };
+    const timer = setTimeout(() => {
+      signal?.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal?.addEventListener("abort", onAbort, { once: true });
+  });
+}
+
+async function readWindow(reader, offset, length, signal, item) {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      const bytes = await reader.read(offset, length, { signal });
+      item.message = "";
+      return bytes;
+    } catch (err) {
+      if (signal.aborted || err?.name === "AbortError" || attempt >= WINDOW_ATTEMPTS) throw err;
+      item.message = `Retrying at ${fmtBytes(offset)} (${attempt}/${WINDOW_ATTEMPTS}): ${describeError(err)}`;
+      paint(item);
+      await sleep(1000 * 2 ** (attempt - 1), signal);
+    }
+  }
+}
+
+async function writeInWindows(c, item, handle, signal) {
+  const reader = await c.openFile(item.source, { signal });
+  let writable = null;
+  let finished = false;
+  try {
+    item.total = reader.size;
+    writable = await handle.createWritable();
+    let offset = 0;
+    while (offset < reader.size) {
+      const length = Math.min(WINDOW_BYTES, reader.size - offset);
+      const bytes = await readWindow(reader, offset, length, signal, item);
+      await writable.write(bytes);
+      offset += bytes.byteLength;
+      trackProgress(item, { unit: "bytes", completed: offset, total: reader.size });
+    }
+    await writable.close();
+    finished = true;
+    item.completed = offset;
+  } finally {
+    if (writable && !finished) await writable.abort().catch(() => {});
+    reader.close();
+  }
+}
+
+async function downloadOne(c, item, dirHandle, saveHandle, signal) {
   item.status = "running";
   item.startedAt = performance.now();
   item.sample = { t: performance.now(), bytes: 0, speed: 0 };
   item.message = "Opening…";
   paint(item);
 
-  const onProgress = (event) => trackProgress(item, event);
-
   if (canStream) {
-    const options = { signal, onProgress, suggestedName: suggestName(item) };
-    if (dirHandle) options.fileHandle = await fileHandleFor(dirHandle, item);
-    await c.streamAndSave(item.source, options);
+    const handle = saveHandle ?? (dirHandle ? await fileHandleFor(dirHandle, item) : null);
+    if (!handle) {
+      throw new Error("No destination chosen: pick a folder, or save files one at a time.");
+    }
+    await writeInWindows(c, item, handle, signal);
   } else {
     // No File System Access API: buffered download, still memory-capped by the SDK.
-    const result = await c.download(item.source, { signal, onProgress });
+    const result = await c.download(item.source, {
+      signal,
+      onProgress: (event) => trackProgress(item, event),
+    });
     item.completed = item.total = result.bytes.byteLength;
     await anchorSave(result.blob, suggestName(item));
   }
@@ -362,6 +429,21 @@ async function runItems(queue, dirHandle) {
   const parallel = Math.max(1, Number(els.par.value) || 1);
 
   try {
+    // Ask for the destination before awaiting anything else: the picker needs
+    // the click's user activation, and connect() spends it.
+    let saveHandle = null;
+    if (canStream && !dirHandle && total === 1) {
+      try {
+        saveHandle = await window.showSaveFilePicker({
+          id: "ziggota-save",
+          suggestedName: suggestName(queue[0]),
+        });
+      } catch (err) {
+        if (err?.name === "AbortError") return setStatus("Save cancelled.");
+        throw err;
+      }
+    }
+
     setStatus("Connecting to Autonomi mainnet…");
     const c = await connect();
 
@@ -375,7 +457,7 @@ async function runItems(queue, dirHandle) {
           continue;
         }
         try {
-          await downloadOne(c, item, dirHandle, signal);
+          await downloadOne(c, item, dirHandle, saveHandle, signal);
           done += 1;
         } catch (err) {
           if (signal.aborted || err?.name === "AbortError") {
