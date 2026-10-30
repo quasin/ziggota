@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ziggota — fast Autonomi downloader</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="top">
+        <div>
+          <h1>Ziggota</h1>
+          <p class="tagline">You're got a Release.</p>
+        </div>
+        <span id="net" class="pill" data-state="idle">mainnet · not connected</span>
+      </header>
+
+      <section class="card">
+        <label class="label" for="src">Public address, <code>ant://</code> link or manifest — one per line</label>
+        <textarea
+          id="src"
+          spellcheck="false"
+          placeholder="ant://0123456789abcdef…&#10;ant://manifest/…&#10;64-hex DataMap address"
+        ></textarea>
+        <div class="row">
+          <button id="add" class="primary">Add to queue</button>
+          <label class="ghost file">
+            Open .ant manifest
+            <input id="antfile" type="file" accept=".ant,application/octet-stream" hidden />
+          </label>
+          <span id="caps" class="hint"></span>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="queue-head">
+          <h2>Queue <span id="count" class="dim">0 files</span></h2>
+          <div class="row">
+            <label class="par">Parallel
+              <select id="par">
+                <option>1</option>
+                <option>2</option>
+                <option selected>3</option>
+                <option>4</option>
+                <option>6</option>
+              </select>
+            </label>
+            <button id="all" class="primary" disabled>Download all…</button>
+            <button id="cancel" disabled>Cancel</button>
+            <button id="clear" class="ghost">Clear</button>
+          </div>
+        </div>
+        <ul id="list" class="list"></ul>
+        <p id="empty" class="empty">Queue is empty. Paste a link above.</p>
+      </section>
+
+      <p id="status" class="status" role="status"></p>
+    </main>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

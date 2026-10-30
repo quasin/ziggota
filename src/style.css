@@ -1,0 +1,131 @@
+:root {
+  color-scheme: dark;
+  --bg: #0d1014;
+  --card: #151a21;
+  --line: #232b36;
+  --text: #e7edf5;
+  --dim: #8b98a9;
+  --accent: #5ee0b5;
+  --accent-ink: #05231a;
+  --danger: #ff7a7a;
+  --ok: #5ee0b5;
+  --radius: 12px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(1200px 600px at 20% -10%, #16232c 0%, var(--bg) 55%);
+  color: var(--text);
+  font: 15px/1.5 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+.app {
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 40px 20px 64px;
+  display: grid;
+  gap: 18px;
+}
+
+.top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+h1 { margin: 0; font-size: 26px; letter-spacing: -0.02em; }
+.tagline { margin: 2px 0 0; color: var(--dim); font-size: 13px; }
+h2 { margin: 0; font-size: 15px; font-weight: 600; }
+.dim { color: var(--dim); font-weight: 400; }
+
+.pill {
+  font-size: 12px;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--dim);
+  white-space: nowrap;
+}
+.pill[data-state="ready"] { color: var(--ok); border-color: #2b5a48; }
+.pill[data-state="busy"] { color: #ffd479; border-color: #5a4c2b; }
+.pill[data-state="error"] { color: var(--danger); border-color: #5a2b2b; }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.label { font-size: 13px; color: var(--dim); }
+code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.92em; }
+
+textarea {
+  width: 100%;
+  min-height: 92px;
+  resize: vertical;
+  padding: 10px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: #0b0f14;
+  color: var(--text);
+  font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+textarea:focus { outline: 2px solid #2f6a56; outline-offset: 1px; }
+
+.row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.queue-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+button, .ghost {
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #1c232c;
+  color: var(--text);
+  cursor: pointer;
+}
+button:hover:not(:disabled), .ghost:hover { border-color: #384657; }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+button.primary:hover:not(:disabled) { filter: brightness(1.08); }
+button.ghost { background: transparent; }
+.ghost.file { display: inline-flex; align-items: center; }
+
+.par { font-size: 12px; color: var(--dim); display: inline-flex; align-items: center; gap: 6px; }
+select {
+  background: #0b0f14;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 5px 7px;
+  font: inherit;
+  font-size: 12px;
+}
+
+.hint { font-size: 12px; color: var(--dim); }
+
+.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #10151b;
+}
+.item-name { font-size: 13px; overflow-wrap: anywhere; }
+.item-meta { font-size: 11px; color: var(--dim); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.item-actions { display: flex; gap: 8px; align-items: center; }
+.item-actions button { padding: 5px 10px; font-size: 12px; }
+.bar { grid-column: 1 / -1; height: 4px; background: #1e2731; border-radius: 999px; overflow: hidden; }
+.bar > i { display: block; height: 100%; width: 0; background: var(--accent); transition: width 0.15s linear; }
+.state { font-size: 12px; color: var(--dim); grid-column: 1 / -1; }
+.state[data-kind="done"] { color: var(--ok); }
+.state[data-kind="error"] { color: var(--danger); }
+
+.empty { margin: 4px 0; font-size: 13px; color: var(--dim); }
+.status { margin: 0; font-size: 12px; color: var(--dim); min-height: 18px; overflow-wrap: anywhere; }
+.status[data-kind="error"] { color: var(--danger); }
