@@ -1,2 +1,2 @@
 # ziggota
-Ziggota - You got a Release.
+Ziggota - You're got a Release.
